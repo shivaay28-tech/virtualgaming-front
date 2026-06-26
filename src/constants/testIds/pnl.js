@@ -1,0 +1,15 @@
+export const PNL = {
+  page: "pnl-page",
+  backBtn: "pnl-back-btn",
+  fromDate: "pnl-from-date",
+  toDate: "pnl-to-date",
+  applyBtn: "pnl-apply-btn",
+  netPnl: "pnl-net",
+  wagered: "pnl-wagered",
+  returned: "pnl-returned",
+  betCount: "pnl-bet-count",
+  exportBtn: "pnl-export-btn",
+  table: "pnl-bets-table",
+  prevBtn: "pnl-prev-btn",
+  nextBtn: "pnl-next-btn",
+};

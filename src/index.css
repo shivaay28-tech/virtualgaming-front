@@ -1,0 +1,500 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fonts: Cormorant Garamond (headings), Outfit (body), JetBrains Mono (data) */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap");
+
+:root {
+    /* Shadcn dark base */
+    --background: 240 6% 5%;
+    --foreground: 0 0% 98%;
+    --card: 240 5% 8%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 5% 8%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 45 70% 53%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 240 5% 14%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 5% 64%;
+    --accent: 45 70% 53%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5% 16%;
+    --input: 240 5% 16%;
+    --ring: 45 70% 53%;
+    --radius: 0.5rem;
+
+    /* Casino theme tokens (overridden per theme) */
+    --theme-primary: #d4af37;
+    --theme-primary-hover: #f3e5ab;
+    --theme-felt: #0a2e1f;
+    --theme-felt-2: #061a12;
+    --theme-accent: #e63946;
+}
+
+[data-theme="classic"] {
+    --theme-primary: #d4af37;
+    --theme-primary-hover: #f3e5ab;
+    --theme-felt: #0a2e1f;
+    --theme-felt-2: #061a12;
+    --theme-accent: #e63946;
+}
+
+[data-theme="royal"] {
+    --theme-primary: #c9935a;
+    --theme-primary-hover: #e2c2a4;
+    --theme-felt: #4a0e17;
+    --theme-felt-2: #2a060c;
+    --theme-accent: #f4a261;
+}
+
+[data-theme="dubai"] {
+    --theme-primary: #e5e4e2;
+    --theme-primary-hover: #ffffff;
+    --theme-felt: #1a1a1c;
+    --theme-felt-2: #0a0a0b;
+    --theme-accent: #8a9a5b;
+}
+
+[data-theme="cyber"] {
+    --theme-primary: #00ffc4;
+    --theme-primary-hover: #73ffdf;
+    --theme-felt: #0a0b1a;
+    --theme-felt-2: #050618;
+    --theme-accent: #ff007f;
+}
+
+* {
+    border-color: hsl(var(--border));
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    background: #0b0b0c;
+}
+
+body {
+    margin: 0;
+    color: hsl(var(--foreground));
+    font-family:
+        "Outfit",
+        -apple-system,
+        BlinkMacSystemFont,
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.font-display {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    letter-spacing: -0.01em;
+}
+
+.font-mono-data {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* Noise overlay */
+.noise::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='1'/></svg>");
+}
+
+/* Felt table radial */
+.felt-bg {
+    background:
+        radial-gradient(ellipse at center,
+            var(--theme-felt) 0%,
+            var(--theme-felt-2) 80%),
+        #000;
+}
+
+/* Chip */
+.chip {
+    background: radial-gradient(circle at 30% 30%,
+            rgba(255, 255, 255, 0.25),
+            transparent 40%);
+    box-shadow:
+        inset 0 0 0 2px rgba(255, 255, 255, 0.18),
+        inset 0 0 0 7px var(--chip-color, #d4af37),
+        inset 0 0 0 9px rgba(0, 0, 0, 0.55),
+        0 8px 18px rgba(0, 0, 0, 0.55);
+}
+
+/* Realistic playing cards */
+.tp-card {
+    background: linear-gradient(160deg, #fffef9 0%, #f8f4ec 45%, #ebe5d8 100%);
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    border-radius: 7px;
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 2px 4px rgba(0, 0, 0, 0.12),
+        0 10px 22px rgba(0, 0, 0, 0.38),
+        0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.tp-card-back {
+    position: relative;
+    background:
+        radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.08) 0%, transparent 55%),
+        repeating-conic-gradient(
+            from 45deg at 50% 50%,
+            #1a3f7a 0deg 90deg,
+            #153566 90deg 180deg,
+            #1a3f7a 180deg 270deg,
+            #153566 270deg 360deg
+        );
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 7px;
+    box-shadow:
+        inset 0 0 0 3px rgba(255, 255, 255, 0.92),
+        inset 0 0 0 5px #1a3f7a,
+        inset 0 0 0 7px rgba(255, 255, 255, 0.35),
+        inset 0 0 0 8px #153566,
+        0 2px 4px rgba(0, 0, 0, 0.15),
+        0 10px 22px rgba(0, 0, 0, 0.42);
+}
+.tp-card-back::after {
+    content: "";
+    position: absolute;
+    inset: 18% 22%;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.06), transparent 70%);
+    pointer-events: none;
+}
+
+.glow-gold {
+    box-shadow:
+        0 0 0 1px var(--theme-primary),
+        0 0 24px 4px rgba(212, 175, 55, 0.35);
+}
+
+.glow-win {
+    box-shadow: 0 0 0 2px var(--theme-primary), 0 0 36px 8px var(--theme-primary);
+}
+
+/* Scrollbar dark */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+}
+
+/* Marquee for "no more bets" */
+@keyframes pulse-warn {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.55;
+    }
+}
+
+.pulse-warn {
+    animation: pulse-warn 0.7s ease-in-out infinite;
+}
+
+/* ─── BetControls utilities ──────────────────────────────────────────── */
+
+/* Remove number input spinners (cross-browser) */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Amount glow – applied when a valid amount is selected */
+.amount-glow {
+    box-shadow:
+        0 0 0 1px var(--theme-primary),
+        0 0 14px rgba(212, 175, 55, 0.2);
+}
+
+
+/* ─── Mobile responsive helpers ─────────────────────────────────────── */
+
+/* Safe-area bottom padding for sticky chip bar on notched devices */
+.pb-safe {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+/* Sticky chip tray (mobile) */
+.chip-tray-mobile {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+}
+
+/* Horizontal chip scroll – hide scrollbar visually but keep it functional */
+.chip-scroll {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.chip-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* Smooth momentum scroll for panels on iOS */
+.scroll-smooth-ios {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+}
+
+/* Mobile collapsible section */
+.mobile-section {
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+}
+
+.mobile-section__header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    text-align: left;
+    background: none;
+    border: none;
+    color: inherit;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-section__title {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mobile-section__chevron {
+    transition: transform 0.22s ease;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.mobile-section__chevron--open {
+    transform: rotate(180deg);
+}
+
+.mobile-section__body {
+    padding: 0 14px 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Phase pill badge */
+.phase-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    color: var(--theme-primary);
+    background: rgba(212, 175, 55, 0.08);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ADMIN DESIGN SYSTEM — control room shell
+   All classes are scoped to .admin-shell to prevent bleed into player app
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Spacing tokens ───────────────────────────────────────────────────── */
+:root {
+    --admin-shell-pad: 0.75rem;
+    --admin-section-gap: 0.75rem;
+    --admin-card-pad: 0.75rem;
+    --admin-row-py: 0.25rem;
+    --admin-row-px: 0.5rem;
+    --admin-sidebar-w: 196px;
+    --admin-header-h: 40px;
+}
+
+/* ── Shell layout ─────────────────────────────────────────────────────── */
+.admin-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #09090b;
+    color: white;
+    font-size: 0.75rem;
+}
+
+.admin-header {
+    height: var(--admin-header-h);
+    min-height: var(--admin-header-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 9, 11, 0.95);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+}
+
+.admin-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.admin-sidebar-wrapper {
+    width: var(--admin-sidebar-w);
+    min-width: var(--admin-sidebar-w);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.01);
+    overflow-y: auto;
+    position: sticky;
+    top: var(--admin-header-h);
+    height: calc(100vh - var(--admin-header-h));
+}
+
+.admin-sidebar {
+    padding: 0.5rem 0;
+}
+
+.admin-main {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.01);
+    font-size: 0.6875rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.admin-panel {
+    padding: var(--admin-shell-pad);
+    flex: 1;
+}
+
+.admin-panel>*+* {
+    margin-top: var(--admin-section-gap);
+}
+
+/* ── Status pills ──────────────────────────────────────────────────────── */
+.admin-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid;
+}
+
+.admin-status-pill--ok {
+    background: rgba(52, 211, 153, 0.1);
+    color: #34d399;
+    border-color: rgba(52, 211, 153, 0.2);
+}
+
+.admin-status-pill--warn {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.2);
+}
+
+.admin-status-pill--err {
+    background: rgba(248, 113, 113, 0.1);
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.2);
+}
+
+.admin-status-pill--neutral {
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.45);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Admin table global ────────────────────────────────────────────────── */
+.admin-shell table {
+    border-collapse: collapse;
+}
+
+.admin-shell th {
+    font-weight: 500;
+}
+
+/* ── Scrollbar — thin, dark ────────────────────────────────────────────── */
+.admin-sidebar-wrapper::-webkit-scrollbar,
+.admin-main::-webkit-scrollbar {
+    width: 4px;
+}
+
+.admin-sidebar-wrapper::-webkit-scrollbar-track,
+.admin-main::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.admin-sidebar-wrapper::-webkit-scrollbar-thumb,
+.admin-main::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}

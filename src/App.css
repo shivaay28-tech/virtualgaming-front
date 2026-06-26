@@ -1,0 +1,4 @@
+/* legacy file kept minimal; real styles live in index.css */
+.App {
+    min-height: 100vh;
+}
