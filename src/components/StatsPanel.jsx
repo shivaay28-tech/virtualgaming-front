@@ -35,9 +35,11 @@ function formatTimeRange(summary) {
   }
 }
 
-export function StatsPanel({ sessionSummary }) {
+export function StatsPanel({ sessionSummary, currentRoundNumber }) {
   const summary = sessionSummary || {};
   const timeRange = formatTimeRange(summary);
+  const roundsDisplay =
+    currentRoundNumber ?? summary.current_round_number ?? 0;
 
   return (
     <div data-testid="stats-panel">
@@ -51,7 +53,7 @@ export function StatsPanel({ sessionSummary }) {
       )}
       {/* 2 cols on mobile, 3 cols on desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-        <Cell label="Rounds" value={summary.total_rounds ?? 0} testId="stat-rounds" />
+        <Cell label="Rounds" value={roundsDisplay} testId="stat-rounds" />
         <Cell label="A Win %" value={`${summary.a_win_pct ?? 0}%`} testId="stat-a-rate" />
         <Cell label="B Win %" value={`${summary.b_win_pct ?? 0}%`} testId="stat-b-rate" />
         <Cell label="Pair+ A %" value={`${summary.pair_plus_a_pct ?? 0}%`} testId="stat-pair-a" />

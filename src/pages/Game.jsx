@@ -496,7 +496,10 @@ export default function Game() {
             <div className="text-[10px] tracking-[0.2em] uppercase text-white/40 mb-3">
               Session statistics
             </div>
-            <StatsPanel sessionSummary={displayState.session_summary} />
+            <StatsPanel
+              sessionSummary={displayState.session_summary}
+              currentRoundNumber={displayState.round_number}
+            />
           </div>
           <div className="rounded-md border border-white/10 bg-white/[0.02] p-4">
             <div className="text-[10px] tracking-[0.2em] uppercase text-white/40 mb-3">
@@ -547,7 +550,10 @@ export default function Game() {
 
         {/* Stats — default collapsed */}
         <MobileSection title="Session Statistics" defaultOpen={false}>
-          <StatsPanel sessionSummary={displayState.session_summary} />
+          <StatsPanel
+            sessionSummary={displayState.session_summary}
+            currentRoundNumber={displayState.round_number}
+          />
         </MobileSection>
 
         {/* Chat — default collapsed */}
