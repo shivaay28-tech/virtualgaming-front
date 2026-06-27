@@ -114,8 +114,10 @@ export default function Game() {
           sayEvent("winner_b", lang, o.b_hand_name, dealerId);
           setWinnerLine(`Player B wins with ${o.b_hand_name}.`);
         }
-        if (displayState.user_balance != null) {
-          setBalance(displayState.user_balance);
+        if (user) {
+          api.get("/game/state").then(({ data }) => {
+            if (data.user_balance != null) setBalance(data.user_balance);
+          }).catch(() => {});
         }
         done();
       } else {
@@ -124,7 +126,7 @@ export default function Game() {
       prevPhase.current = phase;
       prevRoundId.current = displayState.round_id;
     }
-  }, [displayState, setBalance]);
+  }, [displayState, setBalance, user]);
 
   const placeBet = useCallback(
     async (marketId) => {

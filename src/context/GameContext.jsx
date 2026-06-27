@@ -15,6 +15,9 @@ function mergeGameState(prev, incoming) {
     sameRound &&
     (!incoming.my_bets || incoming.my_bets.length === 0) &&
     prev.my_bets?.length;
+  const my_bets = sameRound
+    ? (preserveBets ? prev.my_bets : (incoming.my_bets ?? prev.my_bets ?? []))
+    : (incoming.my_bets ?? []);
   const outcome =
     incoming.phase === "settled"
       ? (incoming.outcome ?? (sameRound ? prev.outcome : undefined))
@@ -23,7 +26,7 @@ function mergeGameState(prev, incoming) {
     ...prev,
     ...incoming,
     outcome,
-    my_bets: preserveBets ? prev.my_bets : (incoming.my_bets ?? prev.my_bets ?? []),
+    my_bets,
     history: incoming.history ?? prev.history,
     session_summary: incoming.session_summary ?? prev.session_summary,
   };
