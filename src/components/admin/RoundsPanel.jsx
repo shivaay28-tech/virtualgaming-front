@@ -21,6 +21,7 @@ function formatTs(iso) {
 function StatusBadge({ status }) {
   const cls = {
     settled: "bg-emerald-500/20 text-emerald-300",
+    settling: "bg-amber-500/20 text-amber-300",
     aborted: "bg-red-500/20 text-red-300",
     betting: "bg-amber-500/20 text-amber-300",
   }[status] || "bg-white/10 text-white/50";
@@ -147,6 +148,7 @@ export function RoundsPanel() {
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls + " w-auto"}>
             <option value="">All statuses</option>
             <option value="settled">settled</option>
+            <option value="settling">settling</option>
             <option value="aborted">aborted</option>
             <option value="betting">betting</option>
           </select>

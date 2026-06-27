@@ -35,7 +35,7 @@ function useTableDimensions() {
   return { ref, width };
 }
 
-export function CasinoTable({ state, online }) {
+export function CasinoTable({ state, online, walletsPending = false }) {
   const phase = state.phase;
   const announcedWinner = phase === "settled" ? state.outcome?.winner : null;
   const isReveal = phase === "reveal" || phase === "settled";
@@ -208,6 +208,20 @@ export function CasinoTable({ state, online }) {
                 data-testid="no-more-bets-banner"
               >
                 No More Bets
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {phase === "settled" && walletsPending && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute top-[28%] left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-sm bg-black/70 border border-white/20 text-[10px] text-white/80 tracking-wide"
+                data-testid="wallets-pending-banner"
+              >
+                Updating balances…
               </motion.div>
             )}
           </AnimatePresence>

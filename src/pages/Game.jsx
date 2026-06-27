@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Wallet, KeyRound, ChevronDown, Menu, X } from "lucide-react";
 import { api, formatApiError } from "../lib/api";
+import { tableSocket } from "../lib/ws";
 import { useAuth } from "../context/AuthContext";
 import { useGame } from "../context/GameContext";
 import { sayEvent, isDealerMuted, setDealerMuted, unlockAudio } from "../lib/tts";
@@ -81,8 +82,19 @@ export default function Game() {
   const prevRoundId = useRef(null);
   const [winnerLine, setWinnerLine] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [walletsPending, setWalletsPending] = useState(false);
 
-  // Dealer voice + wallet sync on settle (balance from WS state, not /auth/me)
+  useEffect(() => {
+    const off = tableSocket.subscribe((msg) => {
+      if (msg.type === "balance" && msg.balance != null) {
+        setBalance(msg.balance);
+        setWalletsPending(false);
+      }
+    });
+    return off;
+  }, [setBalance]);
+
+  // Dealer voice on phase change (balance via WS balance event)
   useEffect(() => {
     if (!displayState) return;
     const phase = displayState.phase;
@@ -114,10 +126,8 @@ export default function Game() {
           sayEvent("winner_b", lang, o.b_hand_name, dealerId);
           setWinnerLine(`Player B wins with ${o.b_hand_name}.`);
         }
-        if (user) {
-          api.get("/game/state").then(({ data }) => {
-            if (data.user_balance != null) setBalance(data.user_balance);
-          }).catch(() => {});
+        if (user && displayState.my_bets?.length) {
+          setWalletsPending(displayState.settlement_status === "settling");
         }
         done();
       } else {
@@ -447,7 +457,12 @@ export default function Game() {
         {/* ── CENTER (always first on mobile) ────────────────────────────── */}
         <section className="lg:col-span-6 flex flex-col gap-4">
           {/* Casino Table */}
-          <CasinoTable state={displayState} online={online} speaking={speaking} />
+          <CasinoTable
+            state={displayState}
+            online={online}
+            speaking={speaking}
+            walletsPending={walletsPending}
+          />
 
           {/* ── DESKTOP BET CONTROLS ─── shown above markets on lg+ */}
           <div className="hidden lg:block">
