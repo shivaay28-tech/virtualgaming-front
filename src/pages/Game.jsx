@@ -70,7 +70,7 @@ function MobileSection({ title, icon, defaultOpen = false, children }) {
 /* ─── Game ───────────────────────────────────────────────────────────── */
 export default function Game() {
   const { user, logout, setBalance } = useAuth();
-  const { state, volumes, online, mergeMyBet, gameStatus, maintenanceReason, retryGame } = useGame();
+  const { state, volumes, online, mergeMyBet, gameStatus, maintenanceReason, retryGame, wsCapacityLimited } = useGame();
   const displayState = usePhaseClock(state);
   const recentBets = useRecentBets(displayState?.phase, displayState?.round_id);
   const nav = useNavigate();
@@ -260,6 +260,15 @@ export default function Game() {
       onClick={() => unlockAudio()}
     >
       <Toaster theme="dark" position="top-center" richColors />
+
+      {wsCapacityLimited && (
+        <div
+          className="sticky top-0 z-40 px-4 py-2 text-center text-sm bg-amber-500/90 text-black font-medium"
+          role="status"
+        >
+          Table is at capacity — reconnecting shortly…
+        </div>
+      )}
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 px-3 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 flex items-center justify-between gap-3 border-b border-white/10 bg-black/60 backdrop-blur-xl">

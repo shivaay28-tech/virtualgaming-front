@@ -9,6 +9,7 @@ class TableSocket {
     this.subs = new Set();
     this.reconnectTimer = null;
     this.retry = 0;
+    this.capacityLimited = false;
   }
 
   connect() {
@@ -19,7 +20,11 @@ class TableSocket {
       this._scheduleReconnect();
       return;
     }
-    this.ws.onopen = () => { this.retry = 0; };
+    this.ws.onopen = () => {
+      this.retry = 0;
+      this.capacityLimited = false;
+      this._emit({ type: "ws_status", connected: true, capacityLimited: false });
+    };
     this.ws.onmessage = (ev) => {
       let data;
       try { data = JSON.parse(ev.data); } catch { return; }
@@ -27,13 +32,37 @@ class TableSocket {
         try { fn(data); } catch (err) { console.error("ws subscriber error", err); }
       });
     };
-    this.ws.onclose = () => this._scheduleReconnect();
+    this.ws.onclose = (ev) => {
+      const capacityLimited = ev.code === 1013;
+      this.capacityLimited = capacityLimited;
+      this._emit({
+        type: "ws_status",
+        connected: false,
+        capacityLimited,
+        code: ev.code,
+        reason: ev.reason,
+      });
+      this._scheduleReconnect(ev.code);
+    };
     this.ws.onerror = () => { try { this.ws.close(); } catch (e) { /* ignore */ } };
   }
 
-  _scheduleReconnect() {
+  _emit(msg) {
+    this.subs.forEach((fn) => {
+      try { fn(msg); } catch (err) { console.error("ws subscriber error", err); }
+    });
+  }
+
+  _scheduleReconnect(closeCode) {
     if (this.reconnectTimer) return;
-    const delay = Math.min(8000, 500 * Math.pow(2, this.retry++));
+    let delay;
+    if (closeCode === 1013) {
+      delay = 30000 + Math.random() * 30000;
+      this.retry = 0;
+    } else {
+      delay = Math.min(8000, 500 * Math.pow(2, this.retry++));
+      delay += Math.random() * 2000;
+    }
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();

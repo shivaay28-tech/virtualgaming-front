@@ -8,8 +8,9 @@ import {
   videoTimeForPhase,
   cardRevealSchedule,
 } from "../lib/revealTiming";
+import { mediaUrl } from "../lib/media";
 
-const TABLE_VIDEO = `${process.env.PUBLIC_URL}/videos/TEENPATTI.mp4`;
+const TABLE_VIDEO = mediaUrl("/videos/TEENPATTI.mp4");
 
 const SUIT_GLYPH = { S: "♠", H: "♥", D: "♦", C: "♣" };
 const SUIT_COLOR = { S: "#111", H: "#c41e3a", D: "#c41e3a", C: "#111" };
@@ -36,7 +37,7 @@ function useTableDimensions() {
 
 export function CasinoTable({ state, online }) {
   const phase = state.phase;
-  const winner = state.outcome?.winner;
+  const announcedWinner = phase === "settled" ? state.outcome?.winner : null;
   const isReveal = phase === "reveal" || phase === "settled";
   const phaseDuration = state.phase_duration || 6;
   const videoRef = useRef(null);
@@ -146,16 +147,16 @@ export function CasinoTable({ state, online }) {
             x={28}
             y={66}
             label="Player A"
-            hand={state.outcome?.a_hand_name}
-            winner={winner === "A"}
+            hand={announcedWinner ? state.outcome?.a_hand_name : undefined}
+            winner={announcedWinner === "A"}
             testId="label-a"
           />
           <PlayerLabel
             x={72}
             y={66}
             label="Player B"
-            hand={state.outcome?.b_hand_name}
-            winner={winner === "B"}
+            hand={announcedWinner ? state.outcome?.b_hand_name : undefined}
+            winner={announcedWinner === "B"}
             testId="label-b"
           />
 
@@ -175,9 +176,9 @@ export function CasinoTable({ state, online }) {
                 face={isReveal && faceCode ? faceCode : null}
                 flipDuration={(schedule.flipEnd - schedule.flipStart) * 1000}
                 winningSide={
-                  winner === "A" && s.side === "a"
+                  announcedWinner === "A" && s.side === "a"
                     ? true
-                    : winner === "B" && s.side === "b"
+                    : announcedWinner === "B" && s.side === "b"
                     ? true
                     : false
                 }

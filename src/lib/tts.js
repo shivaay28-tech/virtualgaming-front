@@ -1,6 +1,7 @@
 /* Pre-recorded dealer voice clips with browser speechSynthesis fallback. */
 
-const PUBLIC = process.env.PUBLIC_URL || "";
+import { mediaUrl } from "./media";
+
 const SUPPORTED_LANGS = ["en", "hi", "gu", "mr"];
 
 const HAND_SLUGS = {
@@ -69,7 +70,7 @@ function clipName(event, hand) {
 
 function clipUrl(dealerId, lang, event, hand) {
   const name = clipName(event, hand);
-  return `${PUBLIC}/audio/dealer/${normalizeDealer(dealerId)}/${normalizeLang(lang)}/${name}.mp3`;
+  return mediaUrl(`/audio/dealer/${normalizeDealer(dealerId)}/${normalizeLang(lang)}/${name}.mp3`);
 }
 
 function phraseText(event, lang, hand) {
@@ -127,7 +128,7 @@ export function sayText(text, lang = "en") {
 /** Required to unlock audio on iOS Safari — call from a user gesture. */
 export function unlockAudio() {
   try {
-    const a = new Audio(`${PUBLIC}/audio/dealer/ava/en/betting.mp3`);
+    const a = new Audio(mediaUrl("/audio/dealer/ava/en/betting.mp3"));
     a.volume = 0;
     a.play().catch(() => {
       const silent = new Audio(

@@ -4,7 +4,7 @@ import { api, isBackendUnreachable } from "../lib/api";
 import { fetchPlatformPublic } from "../lib/platform";
 
 const GameCtx = createContext(null);
-const WS_STALE_MS = 15000;
+const WS_STALE_MS = 30000;
 const FALLBACK_POLL_MS = 15000;
 
 function mergeGameState(prev, incoming) {
@@ -15,9 +15,14 @@ function mergeGameState(prev, incoming) {
     sameRound &&
     (!incoming.my_bets || incoming.my_bets.length === 0) &&
     prev.my_bets?.length;
+  const outcome =
+    incoming.phase === "settled"
+      ? (incoming.outcome ?? (sameRound ? prev.outcome : undefined))
+      : undefined;
   return {
     ...prev,
     ...incoming,
+    outcome,
     my_bets: preserveBets ? prev.my_bets : (incoming.my_bets ?? prev.my_bets ?? []),
     history: incoming.history ?? prev.history,
     session_summary: incoming.session_summary ?? prev.session_summary,
@@ -32,6 +37,7 @@ export function GameProvider({ children }) {
   const [gameStatus, setGameStatus] = useState("loading");
   const [maintenanceReason, setMaintenanceReason] = useState("");
   const [wsConnected, setWsConnected] = useState(false);
+  const [wsCapacityLimited, setWsCapacityLimited] = useState(false);
   const hasStateRef = useRef(false);
   const lastWsAtRef = useRef(0);
 
@@ -119,6 +125,9 @@ export function GameProvider({ children }) {
         setState((s) => (s ? { ...s, table: { ...s.table, ...msg.table_config } } : s));
       } else if (msg.type === "ping") {
         markWsActivity();
+      } else if (msg.type === "ws_status") {
+        setWsConnected(!!msg.connected);
+        setWsCapacityLimited(!!msg.capacityLimited);
       }
     });
     return () => off();
@@ -198,6 +207,7 @@ export function GameProvider({ children }) {
         gameStatus,
         maintenanceReason,
         wsConnected,
+        wsCapacityLimited,
         setMessages,
         mergeMyBet,
         retryGame: loadGame,
