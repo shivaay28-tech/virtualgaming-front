@@ -15,7 +15,7 @@ import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { ProvablyFairModal } from "../components/ProvablyFairModal";
 import { StatsPanel } from "../components/StatsPanel";
 import { RecentBetsPanel } from "../components/RecentBetsPanel";
-import { useRecentBets } from "../hooks/useRecentBets";
+import { useSettlementRefresh } from "../hooks/useSettlementRefresh";
 import { usePhaseClock } from "../hooks/usePhaseClock";
 import { ChatPanel } from "../components/ChatPanel";
 import { CasinoTable } from "../components/CasinoTable";
@@ -71,9 +71,23 @@ function MobileSection({ title, icon, defaultOpen = false, children }) {
 /* ─── Game ───────────────────────────────────────────────────────────── */
 export default function Game() {
   const { user, logout, setBalance } = useAuth();
-  const { state, volumes, online, mergeMyBet, gameStatus, maintenanceReason, retryGame, wsCapacityLimited } = useGame();
+  const { state, volumes, online, mergeMyBet, gameStatus, maintenanceReason, retryGame, wsCapacityLimited, wsReconnectedAt } = useGame();
   const displayState = usePhaseClock(state);
-  const recentBets = useRecentBets(displayState?.phase, displayState?.round_id);
+  const hasRoundBets = (displayState?.my_bets?.length ?? 0) > 0;
+  const {
+    walletsPending,
+    rounds: recentRounds,
+    initialLoading: recentBetsLoading,
+    clearPending,
+  } = useSettlementRefresh({
+    phase: displayState?.phase,
+    roundId: displayState?.round_id,
+    settlementStatus: displayState?.settlement_status,
+    hasBets: hasRoundBets,
+    enabled: !!user,
+    setBalance,
+    wsReconnectedAt,
+  });
   const nav = useNavigate();
   const [betAmount, setBetAmount] = useState(100);
   const [muted, setMuted] = useState(isDealerMuted());
@@ -82,17 +96,16 @@ export default function Game() {
   const prevRoundId = useRef(null);
   const [winnerLine, setWinnerLine] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [walletsPending, setWalletsPending] = useState(false);
 
   useEffect(() => {
     const off = tableSocket.subscribe((msg) => {
       if (msg.type === "balance" && msg.balance != null) {
         setBalance(msg.balance);
-        setWalletsPending(false);
+        clearPending();
       }
     });
     return off;
-  }, [setBalance]);
+  }, [setBalance, clearPending]);
 
   // Dealer voice on phase change (balance via WS balance event)
   useEffect(() => {
@@ -126,9 +139,6 @@ export default function Game() {
           sayEvent("winner_b", lang, o.b_hand_name, dealerId);
           setWinnerLine(`Player B wins with ${o.b_hand_name}.`);
         }
-        if (user && displayState.my_bets?.length) {
-          setWalletsPending(displayState.settlement_status === "settling");
-        }
         done();
       } else {
         setSpeaking(false);
@@ -136,7 +146,7 @@ export default function Game() {
       prevPhase.current = phase;
       prevRoundId.current = displayState.round_id;
     }
-  }, [displayState, setBalance, user]);
+  }, [displayState, user]);
 
   const placeBet = useCallback(
     async (marketId) => {
@@ -518,11 +528,11 @@ export default function Game() {
           </div>
           <div className="rounded-md border border-white/10 bg-white/[0.02] p-4">
             <div className="text-[10px] tracking-[0.2em] uppercase text-white/40 mb-3">
-              Recent bets
+              Last 10 rounds bets
             </div>
             <RecentBetsPanel
-              bets={recentBets.bets}
-              initialLoading={recentBets.initialLoading}
+              rounds={recentRounds}
+              initialLoading={recentBetsLoading}
             />
           </div>
           <div className="rounded-md border border-white/10 bg-white/[0.02] p-4 text-xs text-white/50 leading-relaxed">
@@ -537,10 +547,10 @@ export default function Game() {
 
         {/* ── MOBILE SUPPORT PANELS (hidden on desktop) ──────────────────── */}
         {/* Recent Bets — default open */}
-        <MobileSection title="Recent Bets" defaultOpen={true}>
+        <MobileSection title="Last 10 rounds bets" defaultOpen={true}>
           <RecentBetsPanel
-            bets={recentBets.bets}
-            initialLoading={recentBets.initialLoading}
+            rounds={recentRounds}
+            initialLoading={recentBetsLoading}
           />
         </MobileSection>
 

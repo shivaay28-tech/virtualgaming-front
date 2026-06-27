@@ -41,8 +41,10 @@ export function GameProvider({ children }) {
   const [maintenanceReason, setMaintenanceReason] = useState("");
   const [wsConnected, setWsConnected] = useState(false);
   const [wsCapacityLimited, setWsCapacityLimited] = useState(false);
+  const [wsReconnectedAt, setWsReconnectedAt] = useState(0);
   const hasStateRef = useRef(false);
   const lastWsAtRef = useRef(0);
+  const hadWsConnectedRef = useRef(false);
 
   useEffect(() => {
     hasStateRef.current = !!state;
@@ -131,6 +133,12 @@ export function GameProvider({ children }) {
       } else if (msg.type === "ping") {
         markWsActivity();
       } else if (msg.type === "ws_status") {
+        if (msg.connected) {
+          if (hadWsConnectedRef.current) {
+            setWsReconnectedAt(Date.now());
+          }
+          hadWsConnectedRef.current = true;
+        }
         setWsConnected(!!msg.connected);
         setWsCapacityLimited(!!msg.capacityLimited);
       }
@@ -213,6 +221,7 @@ export function GameProvider({ children }) {
         maintenanceReason,
         wsConnected,
         wsCapacityLimited,
+        wsReconnectedAt,
         setMessages,
         mergeMyBet,
         retryGame: loadGame,
