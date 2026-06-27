@@ -6,6 +6,7 @@ export const API_BASE = `${BACKEND_URL}/api`;
 export const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
+  timeout: 15000,
 });
 
 let refreshPromise = null;
@@ -29,6 +30,14 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+export function isBackendUnreachable(error) {
+  if (!error) return false;
+  if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) return true;
+  if (!error.response) return true;
+  const status = error.response.status;
+  return status === 502 || status === 503 || status === 504;
+}
 
 export function formatApiError(detail) {
   if (detail == null) return "Something went wrong.";

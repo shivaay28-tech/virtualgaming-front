@@ -4,6 +4,7 @@ import "../App.css";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { ThemeProvider } from "../context/ThemeContext";
 import { GameProvider } from "../context/GameContext";
+import { BackendStatusScreen } from "../components/BackendStatusScreen";
 import Login from "../pages/Login";
 import Game from "../pages/Game";
 import AccountStatement from "../pages/AccountStatement";
@@ -20,14 +21,29 @@ function PasswordGate({ children }) {
 }
 
 function Protected({ children }) {
-  const { user } = useAuth();
-  if (user === null) {
+  const { user, authStatus, retryAuth } = useAuth();
+
+  if (authStatus === "unavailable") {
     return (
-      <div className="min-h-screen flex items-center justify-center felt-bg noise">
-        <div className="text-white/60 font-mono-data text-sm">Authenticating…</div>
-      </div>
+      <BackendStatusScreen
+        title="Reconnecting to server…"
+        message="The game server is temporarily unavailable. This usually happens during a deployment."
+        hint="Wait a moment, then try again."
+        onRetry={retryAuth}
+      />
     );
   }
+
+  if (user === null) {
+    return (
+      <BackendStatusScreen
+        title="Authenticating…"
+        message="Checking your session."
+        loading
+      />
+    );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
   return <PasswordGate>{children}</PasswordGate>;
 }

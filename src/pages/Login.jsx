@@ -14,14 +14,28 @@ export default function Login({ redirectTo = "/", title = "Welcome back", subtit
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoEnabled, setDemoEnabled] = useState(false);
   const [demoBalance, setDemoBalance] = useState(null);
+  const [tablePaused, setTablePaused] = useState(false);
+  const [pauseReason, setPauseReason] = useState("");
 
   useEffect(() => {
-    fetchPlatformPublic()
-      .then((p) => {
-        setDemoEnabled(!!p.demo_enabled);
-        if (typeof p.demo_balance === "number") setDemoBalance(p.demo_balance);
-      })
-      .catch(() => {});
+    let alive = true;
+    const load = () => {
+      fetchPlatformPublic({ fresh: true })
+        .then((p) => {
+          if (!alive) return;
+          setDemoEnabled(!!p.demo_enabled);
+          if (typeof p.demo_balance === "number") setDemoBalance(p.demo_balance);
+          setTablePaused(!!p.table_paused);
+          setPauseReason(p.pause_reason || "");
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 15000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
   }, []);
 
   const submit = async (e) => {
@@ -56,6 +70,16 @@ export default function Login({ redirectTo = "/", title = "Welcome back", subtit
         </div>
         <h1 className="font-display text-4xl text-white">{title}</h1>
         <p className="text-white/50 text-sm mt-2">{subtitle}</p>
+
+        {tablePaused && (
+          <div
+            className="mt-4 text-sm text-amber-200/90 bg-amber-500/10 border border-amber-500/30 rounded-sm px-3 py-2"
+            data-testid="login-maintenance-banner"
+          >
+            Table is paused for maintenance
+            {pauseReason ? ` — ${pauseReason}` : ""}
+          </div>
+        )}
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div>

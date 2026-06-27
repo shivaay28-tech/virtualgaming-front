@@ -16,6 +16,7 @@ import { StatsPanel } from "../components/StatsPanel";
 import { RecentBetsPanel } from "../components/RecentBetsPanel";
 import { ChatPanel } from "../components/ChatPanel";
 import { CasinoTable } from "../components/CasinoTable";
+import { BackendStatusScreen } from "../components/BackendStatusScreen";
 import { toast, Toaster } from "sonner";
 
 const MARKETS = [
@@ -67,7 +68,7 @@ function MobileSection({ title, icon, defaultOpen = false, children }) {
 /* ─── Game ───────────────────────────────────────────────────────────── */
 export default function Game() {
   const { user, logout, setBalance, refresh } = useAuth();
-  const { state, volumes, online, mergeMyBet } = useGame();
+  const { state, volumes, online, mergeMyBet, gameStatus, maintenanceReason, retryGame } = useGame();
   const nav = useNavigate();
   const [betAmount, setBetAmount] = useState(100);
   const [muted, setMuted] = useState(isDealerMuted());
@@ -205,10 +206,23 @@ export default function Game() {
   };
 
   if (!state) {
+    if (gameStatus === "unavailable") {
+      return (
+        <BackendStatusScreen
+          title="Reconnecting to table…"
+          message="Could not load the live table. The server may be restarting."
+          hint="Your session is still valid — try again in a few seconds."
+          maintenanceReason={maintenanceReason || undefined}
+          onRetry={retryGame}
+        />
+      );
+    }
     return (
-      <div className="min-h-screen flex items-center justify-center felt-bg noise">
-        <div className="text-white/60 font-mono-data text-sm">Loading the table…</div>
-      </div>
+      <BackendStatusScreen
+        title="Loading the table…"
+        message="Setting up your seat at the live table."
+        loading
+      />
     );
   }
 
