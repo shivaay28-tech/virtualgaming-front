@@ -12,6 +12,7 @@ export function TableControls({ data, onChange }) {
   const [limits, setLimits] = useState({ min_bet: 10, max_bet: 50000 });
   const [session, setSession] = useState({ history_strip_limit: 20, session_timezone: "Asia/Kolkata" });
   const [startingBalance, setStartingBalance] = useState(10000);
+  const [demoBalance, setDemoBalance] = useState(100000);
   const [pauseReason, setPauseReason] = useState("");
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export function TableControls({ data, onChange }) {
         session_timezone: cfg.session_timezone ?? "Asia/Kolkata",
       });
       setStartingBalance(cfg.starting_balance ?? 10000);
+      setDemoBalance(cfg.demo_balance ?? 100000);
     }
   }, [cfg]);
 
@@ -81,6 +83,16 @@ export function TableControls({ data, onChange }) {
     try {
       await api.post("/admin/table/starting-balance", { starting_balance: Number(startingBalance) });
       toast.success("Starting balance updated");
+      onChange();
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail) || "Failed");
+    }
+  };
+
+  const saveDemoBalance = async () => {
+    try {
+      await api.post("/admin/table/demo-balance", { demo_balance: Number(demoBalance) });
+      toast.success("Demo session balance updated");
       onChange();
     } catch (e) {
       toast.error(formatApiError(e.response?.data?.detail) || "Failed");
@@ -198,8 +210,28 @@ export function TableControls({ data, onChange }) {
             />
           </Field>
         </div>
-        <p className="text-xs text-white/40 mt-2">Applied to new self-registrations and admin-created users.</p>
+        <p className="text-xs text-white/40 mt-2">Applied to new self-registrations and admin-created users only.</p>
         <button onClick={saveStartingBalance} data-testid="admin-save-starting-balance" className="mt-4 px-4 py-2 rounded-sm bg-[color:var(--theme-primary)] text-black text-sm">Save starting balance</button>
+      </Card>
+
+      <Card title="Demo session">
+        <div className="max-w-xs">
+          <Field label="Demo session balance (₹)">
+            <input
+              type="number"
+              min={0}
+              max={1000000}
+              value={demoBalance}
+              onChange={(e) => setDemoBalance(Number(e.target.value))}
+              data-testid="admin-demo-balance"
+              className={inputCls}
+            />
+          </Field>
+        </div>
+        <p className="text-xs text-white/40 mt-2">
+          Reset balance each time a visitor clicks Try demo. Set high enough to test max bets and multiple rounds.
+        </p>
+        <button onClick={saveDemoBalance} data-testid="admin-save-demo-balance" className="mt-4 px-4 py-2 rounded-sm bg-[color:var(--theme-primary)] text-black text-sm">Save demo balance</button>
       </Card>
     </div>
   );

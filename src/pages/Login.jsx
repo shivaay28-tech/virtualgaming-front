@@ -13,11 +13,13 @@ export default function Login({ redirectTo = "/", title = "Welcome back", subtit
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoEnabled, setDemoEnabled] = useState(false);
+  const [demoBalance, setDemoBalance] = useState(null);
 
   useEffect(() => {
     fetchPlatformPublic()
       .then((p) => {
         setDemoEnabled(!!p.demo_enabled);
+        if (typeof p.demo_balance === "number") setDemoBalance(p.demo_balance);
       })
       .catch(() => {});
   }, []);
@@ -96,15 +98,22 @@ export default function Login({ redirectTo = "/", title = "Welcome back", subtit
         </form>
 
         {demoEnabled && (
-          <button
-            type="button"
-            onClick={tryDemo}
-            disabled={loading || demoLoading}
-            data-testid="login-demo"
-            className="w-full mt-3 py-3 rounded-sm border border-[color:var(--theme-primary)]/40 text-[color:var(--theme-primary)] text-sm tracking-wide hover:bg-[color:var(--theme-primary)]/10 transition-colors disabled:opacity-50"
-          >
-            {demoLoading ? "Starting demo…" : "Try demo"}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={tryDemo}
+              disabled={loading || demoLoading}
+              data-testid="login-demo"
+              className="w-full mt-3 py-3 rounded-sm border border-[color:var(--theme-primary)]/40 text-[color:var(--theme-primary)] text-sm tracking-wide hover:bg-[color:var(--theme-primary)]/10 transition-colors disabled:opacity-50"
+            >
+              {demoLoading ? "Starting demo…" : "Try demo"}
+            </button>
+            {demoBalance != null && (
+              <p className="mt-2 text-center text-[11px] text-white/40" data-testid="login-demo-balance-hint">
+                Demo chips: ₹{demoBalance.toLocaleString("en-IN")}
+              </p>
+            )}
+          </>
         )}
 
         <div className="mt-6 text-[11px] text-white/30 leading-relaxed border-t border-white/10 pt-4 text-center">
