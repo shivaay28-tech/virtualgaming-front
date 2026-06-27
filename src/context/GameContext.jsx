@@ -124,6 +124,8 @@ export function GameProvider({ children }) {
       } else if (msg.type === "hello") {
         markWsActivity();
         setOnline(msg.online || 0);
+      } else if (msg.type === "online") {
+        setOnline(msg.online || 0);
       } else if (msg.type === "table") {
         setState((s) => (s ? { ...s, table: { ...s.table, ...msg.table_config } } : s));
       } else if (msg.type === "ping") {

@@ -141,6 +141,8 @@ export function AdminLiveProvider({ children }) {
       } else if (msg.type === "hello") {
         setOnline(msg.online || 0);
         setConnected(true);
+      } else if (msg.type === "online") {
+        setOnline(msg.online || 0);
       } else if (msg.type === "table") {
         setOverviewMeta((o) =>
           o ? { ...o, table_config: { ...o.table_config, ...msg.table_config } } : o
