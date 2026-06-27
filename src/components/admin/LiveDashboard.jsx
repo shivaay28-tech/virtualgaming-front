@@ -57,6 +57,7 @@ export function LiveDashboard({ data, onRefresh, connected }) {
 
   return (
     <div className="space-y-3">
+      <p className="text-[10px] text-white/35">Demo activity is excluded from financial reports.</p>
       {/* ── KPI strip ───────────────────────────────────────────────── */}
       <KpiStrip
         items={[

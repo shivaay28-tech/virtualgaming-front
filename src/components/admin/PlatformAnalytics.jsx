@@ -216,6 +216,7 @@ export function PlatformAnalytics({ onViewUserPnl }) {
 
       <p className="text-[10px] text-white/35">
         House profit from settled bets only. Open exposure and wallet adjustments shown separately.
+        Demo activity is excluded from reports.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">

@@ -35,6 +35,12 @@ export function PnlPanel({ initialUser = null }) {
         return;
       }
       const match = users.find((u) => u.email?.toLowerCase() === q.toLowerCase()) || users[0];
+      if (match.is_demo) {
+        toast.error("Demo account is excluded from financial reports");
+        setUserId("");
+        setUserLabel("");
+        return;
+      }
       setUserId(match.id);
       setUserLabel(match.email);
     } catch (e) {

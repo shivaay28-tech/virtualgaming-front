@@ -115,6 +115,11 @@ export function UserDetailDrawer({ userId, open, onOpenChange, onUpdated }) {
                 <span className="text-white/80">@{u.username}</span>
                 <span className="mx-2 text-white/30">·</span>
                 {u.email}
+                {u.is_demo && (
+                  <span className="ml-2 px-1.5 py-0.5 rounded-sm text-[9px] tracking-[0.12em] uppercase bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                    Demo
+                  </span>
+                )}
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <StatCard label="Balance" value={`₹${(u.balance || 0).toLocaleString()}`} />

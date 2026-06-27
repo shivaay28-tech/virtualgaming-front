@@ -135,7 +135,14 @@ export function UsersPanel({ startingBalance = 10000, onUserCreated }) {
               const muted = u.muted_until && new Date(u.muted_until) > new Date();
               return (
                 <tr key={u.id} className="border-t border-white/[0.04] hover:bg-white/[0.02] cursor-pointer" onClick={() => openDetail(u)} data-testid={`admin-user-row-${u.id}`}>
-                  <td className="px-2 py-1 text-xs">{u.name}</td>
+                  <td className="px-2 py-1 text-xs">
+                    {u.name}
+                    {u.is_demo && (
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded-sm text-[9px] tracking-[0.12em] uppercase bg-amber-500/15 text-amber-300 border border-amber-500/25">
+                        Demo
+                      </span>
+                    )}
+                  </td>
                   <td className="px-2 py-1 text-[10px] text-white/55">{u.username || "—"}</td>
                   <td className="px-2 py-1 text-[10px] text-white/55">{u.email}</td>
                   <td className="px-2 py-1 text-[9px] tracking-[0.15em] uppercase text-white/40">{u.role}</td>
