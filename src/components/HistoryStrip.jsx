@@ -1,13 +1,14 @@
 import React from "react";
 
-export function HistoryStrip({ history }) {
+export function HistoryStrip({ history = [] }) {
+  const rows = Array.isArray(history) ? history : [];
   // history: list of rounds [{winner: 'A'|'B'|'TIE', round_number}]
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto pb-1" data-testid="history-strip">
-      {history.length === 0 && (
+      {rows.length === 0 && (
         <div className="text-xs text-white/40 font-mono-data">No rounds yet</div>
       )}
-      {history.map((r) => {
+      {rows.map((r) => {
         const w = r.winner;
         const bg = w === "A" ? "bg-blue-500" : w === "B" ? "bg-red-500" : "bg-white/30";
         const ch = w === "TIE" ? "T" : w;

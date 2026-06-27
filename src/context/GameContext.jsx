@@ -7,9 +7,21 @@ const GameCtx = createContext(null);
 const WS_STALE_MS = 30000;
 const FALLBACK_POLL_MS = 15000;
 
+function normalizeGameState(state) {
+  if (!state) return state;
+  return {
+    ...state,
+    history: Array.isArray(state.history) ? state.history : [],
+    my_bets: Array.isArray(state.my_bets) ? state.my_bets : [],
+    session_summary: state.session_summary ?? {},
+  };
+}
+
 function mergeGameState(prev, incoming) {
   if (!incoming) return prev;
-  if (!prev) return incoming;
+  if (!prev) return normalizeGameState(incoming);
+  incoming = normalizeGameState(incoming);
+  prev = normalizeGameState(prev);
   const sameRound = prev.round_id === incoming.round_id;
   const preserveBets =
     sameRound &&
@@ -68,7 +80,7 @@ export function GameProvider({ children }) {
         api.get("/game/state"),
         api.get("/chat/history?limit=50"),
       ]);
-      setState(s.data);
+      setState(normalizeGameState(s.data));
       setMessages(c.data.messages || []);
       setGameStatus("ready");
       setMaintenanceReason("");

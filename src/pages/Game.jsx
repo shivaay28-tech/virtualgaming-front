@@ -531,7 +531,7 @@ export default function Game() {
               Last 10 rounds bets
             </div>
             <RecentBetsPanel
-              rounds={recentRounds}
+              rounds={recentRounds ?? []}
               initialLoading={recentBetsLoading}
             />
           </div>
@@ -549,7 +549,7 @@ export default function Game() {
         {/* Recent Bets — default open */}
         <MobileSection title="Last 10 rounds bets" defaultOpen={true}>
           <RecentBetsPanel
-            rounds={recentRounds}
+            rounds={recentRounds ?? []}
             initialLoading={recentBetsLoading}
           />
         </MobileSection>
@@ -652,7 +652,7 @@ function RoundCard({ state, phase, mobile = false }) {
       <div className="text-[10px] tracking-[0.2em] uppercase text-white/40 mt-4 mb-1">
         Last {state.table?.history_strip_limit ?? state.history?.length ?? 20} results
       </div>
-      <HistoryStrip history={state.history} />
+      <HistoryStrip history={state.history ?? []} />
     </div>
   );
 }

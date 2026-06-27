@@ -26,7 +26,8 @@ function formatBetResult(b) {
 }
 
 export function RecentBetsPanel({ rounds = [], initialLoading = false }) {
-  const hasRows = rounds.some((r) => (r.bets || []).length > 0);
+  const list = Array.isArray(rounds) ? rounds : [];
+  const hasRows = list.some((r) => (r?.bets || []).length > 0);
 
   if (initialLoading && !hasRows) {
     return <div className="text-xs text-white/40 py-2">Loading…</div>;
@@ -41,7 +42,7 @@ export function RecentBetsPanel({ rounds = [], initialLoading = false }) {
       className="space-y-2 max-h-48 sm:max-h-60 overflow-y-auto scroll-smooth-ios"
       data-testid={HOME.recentBetsPanel}
     >
-      {rounds.map((round) => {
+      {list.map((round) => {
         const bets = round.bets || [];
         if (!bets.length) return null;
         return (

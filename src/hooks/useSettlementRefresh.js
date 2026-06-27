@@ -23,9 +23,31 @@ function roundsSettledForTarget(rounds, targetRoundId) {
   return block.bets.some((b) => b.settled);
 }
 
+function normalizeMyBetsRounds(data) {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data.rounds)) return data.rounds;
+  if (!Array.isArray(data.bets)) return [];
+  const byRound = new Map();
+  for (const b of data.bets) {
+    const rid = b?.round_id;
+    if (!rid) continue;
+    if (!byRound.has(rid)) {
+      byRound.set(rid, {
+        round_id: rid,
+        round_number: b.round_number || 0,
+        bets: [],
+      });
+    }
+    byRound.get(rid).bets.push(b);
+  }
+  return [...byRound.values()].sort(
+    (a, b) => (b.round_number || 0) - (a.round_number || 0),
+  );
+}
+
 async function fetchRecentRounds() {
   const { data } = await api.get(`/game/my-bets?rounds=${MAX_ROUNDS}`);
-  return data.rounds || [];
+  return normalizeMyBetsRounds(data);
 }
 
 async function fetchWalletAndRounds(setBalance, targetRoundId) {
