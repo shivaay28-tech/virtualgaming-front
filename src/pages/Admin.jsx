@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowLeft, RefreshCw, LayoutDashboard, Users, Wallet, TrendingUp,
   Dices, ShieldCheck, MessageSquare, ClipboardList, Server,
@@ -105,10 +105,16 @@ function Sidebar({ tab, setTab, onClose }) {
 /* ─── AdminShell ─────────────────────────────────────────────────────── */
 function AdminShell() {
   const { user, logout } = useAuth();
-  const { data, connected, loading, refresh } = useAdminLive();
+  const { data, connected, loading, refresh, refreshOverview } = useAdminLive();
   const [tab, setTab] = useState("dashboard");
   const [pnlDrillUser, setPnlDrillUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (tab === "dashboard") {
+      refreshOverview();
+    }
+  }, [tab, refreshOverview]);
 
   const handleViewUserPnl = (row) => {
     setPnlDrillUser({ id: row.user_id, email: row.email, name: row.name });

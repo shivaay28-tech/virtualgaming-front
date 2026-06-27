@@ -5,9 +5,24 @@ import { tableSocket } from "../lib/ws";
 
 const AdminLiveCtx = createContext(null);
 const MAX_LIVE_BETS = 30;
+const REFRESH_DEBOUNCE_MS = 2000;
+
+function applyLivePayload(data, setters) {
+  const { setLive, setVolumes, setRoundStats, setLiveBets, lastRoundRef } = setters;
+  setLive(data);
+  setVolumes(data.volumes || {});
+  setRoundStats({
+    total_count: data.round_live?.bet_count ?? 0,
+    total_amount: data.round_live?.total_volume ?? data.total_round_volume ?? 0,
+    unique_bettors: data.round_live?.unique_bettors ?? 0,
+  });
+  setLiveBets(data.round_live?.recent_bets || []);
+  if (data.round?.id) lastRoundRef.current = data.round.id;
+}
 
 export function AdminLiveProvider({ children }) {
-  const [overview, setOverview] = useState(null);
+  const [live, setLive] = useState(null);
+  const [overviewMeta, setOverviewMeta] = useState(null);
   const [wsState, setWsState] = useState(null);
   const [volumes, setVolumes] = useState({});
   const [roundStats, setRoundStats] = useState({ total_count: 0, total_amount: 0, unique_bettors: 0 });
@@ -16,21 +31,40 @@ export function AdminLiveProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const lastRoundRef = useRef(null);
-  const refreshRef = useRef(null);
+  const refreshLiveRef = useRef(null);
+  const refreshOverviewRef = useRef(null);
+  const refreshDebounceRef = useRef(null);
+  const lastRefreshAtRef = useRef(0);
 
-  const refresh = useCallback(async () => {
+  const refreshLive = useCallback(async () => {
+    try {
+      const { data } = await api.get("/admin/live");
+      applyLivePayload(data, {
+        setLive,
+        setVolumes,
+        setRoundStats,
+        setLiveBets,
+        lastRoundRef,
+      });
+      return data;
+    } catch (e) {
+      toast.error(formatApiError(e.response?.data?.detail) || "Failed to load live data");
+      return null;
+    }
+  }, []);
+
+  const refreshOverview = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get("/admin/overview");
-      setOverview(data);
-      setVolumes(data.volumes || {});
-      setRoundStats({
-        total_count: data.round_live?.bet_count ?? 0,
-        total_amount: data.round_live?.total_volume ?? data.total_round_volume ?? 0,
-        unique_bettors: data.round_live?.unique_bettors ?? 0,
+      setOverviewMeta(data);
+      applyLivePayload(data, {
+        setLive: () => {},
+        setVolumes,
+        setRoundStats,
+        setLiveBets,
+        lastRoundRef,
       });
-      setLiveBets(data.round_live?.recent_bets || []);
-      if (data.round?.id) lastRoundRef.current = data.round.id;
       return data;
     } catch (e) {
       toast.error(formatApiError(e.response?.data?.detail) || "Failed to load overview");
@@ -40,15 +74,34 @@ export function AdminLiveProvider({ children }) {
     }
   }, []);
 
-  refreshRef.current = refresh;
+  const refresh = useCallback(async () => {
+    await Promise.all([refreshLive(), refreshOverview()]);
+  }, [refreshLive, refreshOverview]);
+
+  refreshLiveRef.current = refreshLive;
+  refreshOverviewRef.current = refreshOverview;
+
+  const scheduleLiveRefresh = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRefreshAtRef.current < REFRESH_DEBOUNCE_MS) {
+      if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
+      refreshDebounceRef.current = setTimeout(() => {
+        lastRefreshAtRef.current = Date.now();
+        refreshLiveRef.current?.();
+      }, REFRESH_DEBOUNCE_MS);
+      return;
+    }
+    lastRefreshAtRef.current = now;
+    refreshLiveRef.current?.();
+  }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    refreshLive();
+  }, [refreshLive]);
 
   useEffect(() => {
-    const pollMs = connected ? 10000 : 3000;
-    const id = setInterval(() => refreshRef.current?.(), pollMs);
+    if (connected) return undefined;
+    const id = setInterval(() => refreshLiveRef.current?.(), 30000);
     return () => clearInterval(id);
   }, [connected]);
 
@@ -58,15 +111,18 @@ export function AdminLiveProvider({ children }) {
       if (msg.type === "state") {
         const incoming = msg.state;
         setWsState(incoming);
-        if (incoming.round_id && lastRoundRef.current && incoming.round_id !== lastRoundRef.current) {
+        const roundChanged =
+          incoming.round_id &&
+          lastRoundRef.current &&
+          incoming.round_id !== lastRoundRef.current;
+        if (roundChanged) {
           lastRoundRef.current = incoming.round_id;
           setVolumes({});
-          refreshRef.current?.();
         } else if (incoming.round_id) {
           lastRoundRef.current = incoming.round_id;
         }
-        if (incoming.phase === "settled") {
-          refreshRef.current?.();
+        if (roundChanged || incoming.phase === "settled") {
+          scheduleLiveRefresh();
         }
       } else if (msg.type === "bet_volume") {
         setVolumes(msg.volumes || {});
@@ -86,8 +142,11 @@ export function AdminLiveProvider({ children }) {
         setOnline(msg.online || 0);
         setConnected(true);
       } else if (msg.type === "table") {
-        setOverview((o) =>
+        setOverviewMeta((o) =>
           o ? { ...o, table_config: { ...o.table_config, ...msg.table_config } } : o
+        );
+        setLive((l) =>
+          l ? { ...l, table_config: { ...l.table_config, ...msg.table_config } } : l
         );
       } else if (msg.type === "ping") {
         setConnected(true);
@@ -99,43 +158,45 @@ export function AdminLiveProvider({ children }) {
     return () => {
       off();
       clearInterval(checkConn);
+      if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
     };
-  }, []);
+  }, [scheduleLiveRefresh]);
 
   const data = useMemo(() => {
-    if (!overview) return null;
+    const base = { ...(overviewMeta || {}), ...(live || {}) };
+    if (!live && !overviewMeta) return null;
     const round = wsState
       ? {
-          ...overview.round,
-          phase: wsState.phase ?? overview.round?.phase,
-          time_left: wsState.time_left ?? overview.round?.time_left,
-          phase_duration: wsState.phase_duration ?? overview.round?.phase_duration,
-          number: wsState.round_number ?? overview.round?.number,
-          id: wsState.round_id ?? overview.round?.id,
+          ...(base.round || {}),
+          phase: wsState.phase ?? base.round?.phase,
+          time_left: wsState.time_left ?? base.round?.time_left,
+          phase_duration: wsState.phase_duration ?? base.round?.phase_duration,
+          number: wsState.round_number ?? base.round?.number,
+          id: wsState.round_id ?? base.round?.id,
         }
-      : overview.round;
-    const outcome = wsState?.outcome ?? overview.outcome ?? null;
+      : base.round;
+    const outcome = wsState?.outcome ?? base.outcome ?? null;
     return {
-      ...overview,
+      ...base,
       round,
-      cards: wsState?.cards ?? overview.cards,
-      reveal: wsState?.reveal ?? overview.reveal,
+      cards: wsState?.cards ?? base.cards,
+      reveal: wsState?.reveal ?? base.reveal,
       outcome,
-      volumes: Object.keys(volumes).length ? volumes : overview.volumes,
-      total_round_volume: roundStats.total_amount || overview.total_round_volume,
-      online_global: online || overview.online_global,
+      volumes: Object.keys(volumes).length ? volumes : base.volumes,
+      total_round_volume: roundStats.total_amount || base.total_round_volume,
+      online_global: online || base.online_global,
       round_live: {
-        ...(overview.round_live || {}),
-        bet_count: roundStats.total_count ?? overview.round_live?.bet_count ?? 0,
-        unique_bettors: roundStats.unique_bettors ?? overview.round_live?.unique_bettors ?? 0,
-        total_volume: roundStats.total_amount ?? overview.round_live?.total_volume ?? 0,
-        recent_bets: liveBets.length ? liveBets : overview.round_live?.recent_bets ?? [],
+        ...(base.round_live || {}),
+        bet_count: roundStats.total_count ?? base.round_live?.bet_count ?? 0,
+        unique_bettors: roundStats.unique_bettors ?? base.round_live?.unique_bettors ?? 0,
+        total_volume: roundStats.total_amount ?? base.round_live?.total_volume ?? 0,
+        recent_bets: liveBets.length ? liveBets : base.round_live?.recent_bets ?? [],
       },
     };
-  }, [overview, wsState, volumes, roundStats, liveBets, online]);
+  }, [live, overviewMeta, wsState, volumes, roundStats, liveBets, online]);
 
   return (
-    <AdminLiveCtx.Provider value={{ data, connected, loading, refresh }}>
+    <AdminLiveCtx.Provider value={{ data, connected, loading, refresh, refreshOverview, refreshLive }}>
       {children}
     </AdminLiveCtx.Provider>
   );

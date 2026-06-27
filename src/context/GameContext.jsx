@@ -4,6 +4,25 @@ import { api, isBackendUnreachable } from "../lib/api";
 import { fetchPlatformPublic } from "../lib/platform";
 
 const GameCtx = createContext(null);
+const WS_STALE_MS = 15000;
+const FALLBACK_POLL_MS = 15000;
+
+function mergeGameState(prev, incoming) {
+  if (!incoming) return prev;
+  if (!prev) return incoming;
+  const sameRound = prev.round_id === incoming.round_id;
+  const preserveBets =
+    sameRound &&
+    (!incoming.my_bets || incoming.my_bets.length === 0) &&
+    prev.my_bets?.length;
+  return {
+    ...prev,
+    ...incoming,
+    my_bets: preserveBets ? prev.my_bets : (incoming.my_bets ?? prev.my_bets ?? []),
+    history: incoming.history ?? prev.history,
+    session_summary: incoming.session_summary ?? prev.session_summary,
+  };
+}
 
 export function GameProvider({ children }) {
   const [state, setState] = useState(null);
@@ -12,12 +31,24 @@ export function GameProvider({ children }) {
   const [online, setOnline] = useState(0);
   const [gameStatus, setGameStatus] = useState("loading");
   const [maintenanceReason, setMaintenanceReason] = useState("");
-  const pollRef = useRef(null);
+  const [wsConnected, setWsConnected] = useState(false);
   const hasStateRef = useRef(false);
+  const lastWsAtRef = useRef(0);
 
   useEffect(() => {
     hasStateRef.current = !!state;
   }, [state]);
+
+  const markWsActivity = useCallback(() => {
+    lastWsAtRef.current = Date.now();
+    setWsConnected(true);
+  }, []);
+
+  const applyIncomingState = useCallback((incoming) => {
+    setGameStatus("ready");
+    setMaintenanceReason("");
+    setState((prev) => mergeGameState(prev, incoming));
+  }, []);
 
   const loadGame = useCallback(async () => {
     setGameStatus("loading");
@@ -30,6 +61,7 @@ export function GameProvider({ children }) {
       setMessages(c.data.messages || []);
       setGameStatus("ready");
       setMaintenanceReason("");
+      markWsActivity();
       return true;
     } catch (e) {
       if (isBackendUnreachable(e) || !hasStateRef.current) {
@@ -37,7 +69,7 @@ export function GameProvider({ children }) {
       }
       return false;
     }
-  }, []);
+  }, [markWsActivity]);
 
   useEffect(() => {
     loadGame();
@@ -71,34 +103,34 @@ export function GameProvider({ children }) {
     tableSocket.connect();
     const off = tableSocket.subscribe((msg) => {
       if (msg.type === "state") {
-        setGameStatus("ready");
-        setMaintenanceReason("");
-        setState((prev) => {
-          const incoming = msg.state;
-          if (!prev) return incoming;
-          const sameRound = prev.round_id === incoming.round_id;
-          const preserveBets = sameRound && (!incoming.my_bets || incoming.my_bets.length === 0) && prev.my_bets?.length;
-          return {
-            ...prev,
-            ...incoming,
-            my_bets: preserveBets ? prev.my_bets : (incoming.my_bets ?? prev.my_bets ?? []),
-            history: incoming.history ?? prev.history,
-            session_summary: incoming.session_summary ?? prev.session_summary,
-          };
-        });
+        markWsActivity();
+        applyIncomingState(msg.state);
       } else if (msg.type === "bet_volume") {
+        markWsActivity();
         setVolumes(msg.volumes || {});
       } else if (msg.type === "chat") {
         setMessages((m) => [...m, msg.message].slice(-200));
       } else if (msg.type === "chat_delete") {
         setMessages((m) => m.filter((x) => x.id !== msg.message_id));
       } else if (msg.type === "hello") {
+        markWsActivity();
         setOnline(msg.online || 0);
       } else if (msg.type === "table") {
         setState((s) => (s ? { ...s, table: { ...s.table, ...msg.table_config } } : s));
+      } else if (msg.type === "ping") {
+        markWsActivity();
       }
     });
     return () => off();
+  }, [applyIncomingState, markWsActivity]);
+
+  useEffect(() => {
+    const checkConn = setInterval(() => {
+      const open = tableSocket.ws?.readyState === 1;
+      setWsConnected(open);
+      if (!open) lastWsAtRef.current = 0;
+    }, 2000);
+    return () => clearInterval(checkConn);
   }, []);
 
   const lastRound = useRef(null);
@@ -111,25 +143,40 @@ export function GameProvider({ children }) {
   }, [state]);
 
   useEffect(() => {
-    const pollMs = gameStatus === "unavailable"
-      ? 3000
-      : state?.phase === "reveal"
-        ? 400
-        : 2500;
-    pollRef.current = setInterval(async () => {
+    if (gameStatus === "unavailable") {
+      const id = setInterval(async () => {
+        try {
+          const { data } = await api.get("/game/state");
+          applyIncomingState(data);
+        } catch (e) {
+          if (!hasStateRef.current && isBackendUnreachable(e)) {
+            setGameStatus("unavailable");
+          }
+        }
+      }, 3000);
+      return () => clearInterval(id);
+    }
+
+    const id = setInterval(async () => {
+      const wsFresh =
+        wsConnected &&
+        lastWsAtRef.current > 0 &&
+        Date.now() - lastWsAtRef.current < WS_STALE_MS;
+      if (wsFresh) return;
+
       try {
         const { data } = await api.get("/game/state");
-        setState(data);
-        setGameStatus("ready");
-        setMaintenanceReason("");
+        applyIncomingState(data);
+        markWsActivity();
       } catch (e) {
         if (!hasStateRef.current && isBackendUnreachable(e)) {
           setGameStatus("unavailable");
         }
       }
-    }, pollMs);
-    return () => clearInterval(pollRef.current);
-  }, [state?.phase, gameStatus]);
+    }, FALLBACK_POLL_MS);
+
+    return () => clearInterval(id);
+  }, [gameStatus, wsConnected, applyIncomingState, markWsActivity]);
 
   const mergeMyBet = useCallback((bet) => {
     if (!bet?.market) return;
@@ -150,6 +197,7 @@ export function GameProvider({ children }) {
         online,
         gameStatus,
         maintenanceReason,
+        wsConnected,
         setMessages,
         mergeMyBet,
         retryGame: loadGame,

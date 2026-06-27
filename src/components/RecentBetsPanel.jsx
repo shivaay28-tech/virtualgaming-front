@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { api, formatApiError } from "../lib/api";
+import React from "react";
 import { HOME } from "../constants/testIds";
 
 const MARKET_LABELS = {
@@ -22,40 +20,13 @@ function formatStake(amount, betCount) {
 }
 
 function formatBetResult(b) {
-  if (!b.settled) return { label: "Pending", cls: "text-white/40" };
   if (b.tie) return { label: "Tie", cls: "text-amber-400" };
   if (b.won) return { label: `+₹${b.payout}`, cls: "text-emerald-400" };
   return { label: "Lost", cls: "text-red-400" };
 }
 
-export function RecentBetsPanel({ refreshKey }) {
-  const [bets, setBets] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const { data } = await api.get("/game/my-bets?limit=10");
-        if (!cancelled) setBets(data.bets || []);
-      } catch (e) {
-        if (!cancelled) {
-          toast.error(
-            formatApiError(e.response?.data?.detail) || "Failed to load bets"
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  if (loading) {
+export function RecentBetsPanel({ bets = [], initialLoading = false }) {
+  if (initialLoading && !bets.length) {
     return <div className="text-xs text-white/40 py-2">Loading…</div>;
   }
 
@@ -87,10 +58,7 @@ export function RecentBetsPanel({ refreshKey }) {
             <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-white/55">
               <span className="truncate">{formatStake(b.amount, b.bet_count)}</span>
               {b.display_balance != null && (
-                <span
-                  className="shrink-0 text-white/45"
-                  title={b.settled ? "Closing balance" : "Balance after bet"}
-                >
+                <span className="shrink-0 text-white/45" title="Closing balance">
                   → ₹{b.display_balance.toLocaleString()}
                 </span>
               )}

@@ -14,6 +14,8 @@ import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { ProvablyFairModal } from "../components/ProvablyFairModal";
 import { StatsPanel } from "../components/StatsPanel";
 import { RecentBetsPanel } from "../components/RecentBetsPanel";
+import { useRecentBets } from "../hooks/useRecentBets";
+import { usePhaseClock } from "../hooks/usePhaseClock";
 import { ChatPanel } from "../components/ChatPanel";
 import { CasinoTable } from "../components/CasinoTable";
 import { BackendStatusScreen } from "../components/BackendStatusScreen";
@@ -67,8 +69,10 @@ function MobileSection({ title, icon, defaultOpen = false, children }) {
 
 /* ─── Game ───────────────────────────────────────────────────────────── */
 export default function Game() {
-  const { user, logout, setBalance, refresh } = useAuth();
+  const { user, logout, setBalance } = useAuth();
   const { state, volumes, online, mergeMyBet, gameStatus, maintenanceReason, retryGame } = useGame();
+  const displayState = usePhaseClock(state);
+  const recentBets = useRecentBets(displayState?.phase, displayState?.round_id);
   const nav = useNavigate();
   const [betAmount, setBetAmount] = useState(100);
   const [muted, setMuted] = useState(isDealerMuted());
@@ -78,13 +82,13 @@ export default function Game() {
   const [winnerLine, setWinnerLine] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Refresh wallet on settle
+  // Dealer voice + wallet sync on settle (balance from WS state, not /auth/me)
   useEffect(() => {
-    if (!state) return;
-    const phase = state.phase;
-    const roundChanged = prevRoundId.current && prevRoundId.current !== state.round_id;
-    const lang = state.table?.language || "en";
-    const dealerId = state.table?.dealer?.id || "ava";
+    if (!displayState) return;
+    const phase = displayState.phase;
+    const roundChanged = prevRoundId.current && prevRoundId.current !== displayState.round_id;
+    const lang = displayState.table?.language || "en";
+    const dealerId = displayState.table?.dealer?.id || "ava";
     if (phase !== prevPhase.current || roundChanged) {
       setSpeaking(true);
       const done = () => setTimeout(() => setSpeaking(false), 2200);
@@ -98,8 +102,8 @@ export default function Game() {
       } else if (phase === "dealing") {
         sayEvent("dealing", lang, null, dealerId);
         done();
-      } else if (phase === "settled" && state.outcome) {
-        const o = state.outcome;
+      } else if (phase === "settled" && displayState.outcome) {
+        const o = displayState.outcome;
         if (o.winner === "TIE") {
           sayEvent("tie", lang, null, dealerId);
           setWinnerLine("It's a tie. Main bets refunded.");
@@ -110,15 +114,17 @@ export default function Game() {
           sayEvent("winner_b", lang, o.b_hand_name, dealerId);
           setWinnerLine(`Player B wins with ${o.b_hand_name}.`);
         }
+        if (displayState.user_balance != null) {
+          setBalance(displayState.user_balance);
+        }
         done();
-        refresh().catch(() => {});
       } else {
         setSpeaking(false);
       }
       prevPhase.current = phase;
-      prevRoundId.current = state.round_id;
+      prevRoundId.current = displayState.round_id;
     }
-  }, [state, refresh]);
+  }, [displayState, setBalance]);
 
   const placeBet = useCallback(
     async (marketId) => {
@@ -205,7 +211,7 @@ export default function Game() {
     nav("/login");
   };
 
-  if (!state) {
+  if (!displayState) {
     if (gameStatus === "unavailable") {
       return (
         <BackendStatusScreen
@@ -226,13 +232,13 @@ export default function Game() {
     );
   }
 
-  const phase = state.phase;
-  const lang = state.table?.language || "en";
-  const paused = state.table?.paused;
+  const phase = displayState.phase;
+  const lang = displayState.table?.language || "en";
+  const paused = displayState.table?.paused;
 
   const isBettingOpen = phase === "betting" && !paused;
-  const minBet = state.table?.min_bet ?? 10;
-  const maxBet = state.table?.max_bet ?? 50000;
+  const minBet = displayState.table?.min_bet ?? 10;
+  const maxBet = displayState.table?.max_bet ?? 50000;
   const balance = user?.balance ?? 0;
 
   // Derived amount validation (mirrors BetControls internals, used for canBet)
@@ -294,7 +300,7 @@ export default function Game() {
 
           {/* Provably Fair — desktop only */}
           <div className="hidden sm:block">
-            <ProvablyFairModal state={state} />
+            <ProvablyFairModal state={displayState} />
           </div>
 
           {/* Wallet — always visible */}
@@ -364,7 +370,7 @@ export default function Game() {
           >
             <div className="px-4 py-3 flex flex-wrap items-center gap-3">
               <ThemeSwitcher />
-              <ProvablyFairModal state={state} />
+              <ProvablyFairModal state={displayState} />
               <button
                 type="button"
                 onClick={() => { nav("/change-password"); setMobileMenuOpen(false); }}
@@ -397,7 +403,7 @@ export default function Game() {
             data-testid="paused-banner"
           >
             Table paused by admin
-            {state.table?.pause_reason ? ` — ${state.table.pause_reason}` : ""}
+            {displayState.table?.pause_reason ? ` — ${displayState.table.pause_reason}` : ""}
           </motion.div>
         )}
       </AnimatePresence>
@@ -416,21 +422,21 @@ export default function Game() {
         <aside className="hidden lg:block lg:col-span-3 space-y-4">
           <DealerPanel
             phase={phase}
-            dealer={state.table?.dealer}
+            dealer={displayState.table?.dealer}
             lang={lang}
             muted={muted}
             onToggleMute={handleMute}
             lastWinnerLine={winnerLine}
             speaking={speaking}
           />
-          <RoundCard state={state} phase={phase} />
+          <RoundCard state={displayState} phase={phase} />
           <ChatPanel />
         </aside>
 
         {/* ── CENTER (always first on mobile) ────────────────────────────── */}
         <section className="lg:col-span-6 flex flex-col gap-4">
           {/* Casino Table */}
-          <CasinoTable state={state} online={online} speaking={speaking} />
+          <CasinoTable state={displayState} online={online} speaking={speaking} />
 
           {/* ── DESKTOP BET CONTROLS ─── shown above markets on lg+ */}
           <div className="hidden lg:block">
@@ -457,7 +463,7 @@ export default function Game() {
                   id={m.id}
                   label={m.label}
                   subLabel={m.subLabel}
-                  odds={state.odds[m.id]}
+                  odds={displayState.odds[m.id]}
                   total={myBetTotals[m.id] || 0}
                   betCount={myBetCounts[m.id] || 0}
                   liveVolume={vol}
@@ -479,14 +485,15 @@ export default function Game() {
             <div className="text-[10px] tracking-[0.2em] uppercase text-white/40 mb-3">
               Session statistics
             </div>
-            <StatsPanel sessionSummary={state.session_summary} />
+            <StatsPanel sessionSummary={displayState.session_summary} />
           </div>
           <div className="rounded-md border border-white/10 bg-white/[0.02] p-4">
             <div className="text-[10px] tracking-[0.2em] uppercase text-white/40 mb-3">
               Recent bets
             </div>
             <RecentBetsPanel
-              refreshKey={`${state.round_id}-${state.phase}-${state.my_bets?.length ?? 0}`}
+              bets={recentBets.bets}
+              initialLoading={recentBets.initialLoading}
             />
           </div>
           <div className="rounded-md border border-white/10 bg-white/[0.02] p-4 text-xs text-white/50 leading-relaxed">
@@ -503,20 +510,21 @@ export default function Game() {
         {/* Recent Bets — default open */}
         <MobileSection title="Recent Bets" defaultOpen={true}>
           <RecentBetsPanel
-            refreshKey={`${state.round_id}-${state.phase}-${state.my_bets?.length ?? 0}`}
+            bets={recentBets.bets}
+            initialLoading={recentBets.initialLoading}
           />
         </MobileSection>
 
         {/* Round History — default open */}
         <MobileSection title="Round History" defaultOpen={true}>
-          <RoundCard state={state} phase={phase} mobile />
+          <RoundCard state={displayState} phase={phase} mobile />
         </MobileSection>
 
         {/* Dealer — default collapsed */}
         <MobileSection title="Dealer" defaultOpen={false}>
           <DealerPanel
             phase={phase}
-            dealer={state.table?.dealer}
+            dealer={displayState.table?.dealer}
             lang={lang}
             muted={muted}
             onToggleMute={handleMute}
@@ -528,7 +536,7 @@ export default function Game() {
 
         {/* Stats — default collapsed */}
         <MobileSection title="Session Statistics" defaultOpen={false}>
-          <StatsPanel sessionSummary={state.session_summary} />
+          <StatsPanel sessionSummary={displayState.session_summary} />
         </MobileSection>
 
         {/* Chat — default collapsed */}
